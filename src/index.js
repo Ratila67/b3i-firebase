@@ -3,7 +3,8 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import 'dotenv/config';
+// import 'dotenv/config';
+
 // import la DB firebase
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 // TODO: Add SDKs for Firebase products that you want to use
@@ -41,4 +42,17 @@ async function getFactures(db) {
 // on initialise factures et on lui mets await afin de garder le temps de récupérer les données
 const factures = await getFactures(db)
 // on affiche les données récups
-console.log(factures);
+// console.log(factures);
+
+
+// Faire une verification pour si TotalTTC est présent, renvoyer l'id de la facture
+factures.forEach(facture => {
+  // Correction de la condition if et appel correct à parseFloat
+  if (!isNaN(facture.totalTTC) && parseFloat(facture.totalTTC) > -10) {
+    console.log(facture.id);
+  }
+});
+
+// typeof permets d'afficher  le type de la variable
+// parseFloat permets  de convertir en nombre
+// isNaN permets  de vérifier si une valeur est un nombre
