@@ -6,7 +6,8 @@ import { initializeApp } from "firebase/app";
 // import 'dotenv/config';
 
 // import la DB firebase
-import { getFirestore, collection, getDocs, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { onSnapshot, collection } from 'firebase/firestore';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -27,6 +28,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Écouteur de la collection "factures"
+const listenToFactures = (db) => {
+  const facturesCol = collection(db, 'factures');
+
+  // Utilisation de onSnapshot pour écouter les changements
+  onSnapshot(facturesCol, (snapshot) => {
+    const factures = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    afficheFactures(factures); // Met à jour l'affichage des factures
+  });
+};
+
                                                         // Recupération des données de la base de factures, le async permets de mettre des await, sinon await ne foncitonne pas
                                                         // const permet de creer une variable
                                                         // ALTERNATIVE AUJOURD'HUI    const getFactures = async (db) => {
@@ -41,35 +53,41 @@ async function getFactures(db) {
   }
                                                         // on initialise factures et on lui mets await afin de garder le temps de récupérer les données
 const factures = await getFactures(db)
-const afficheFactures = (factures) => {                 // Creation de la fonction afficheFactures
-  const rootEl = document.querySelector('#root');       // Récupération de l'élément HTML. Cette ligne de code déclare une variable constante rootEl et lui assigne l'élément HTML qui a l'ID root dans le document courant, sélectionné à l'aide de la méthode document.querySelector.
-  const ulEl = document.createElement('ul');            // On créé une fonction et on lui mets un ul
-  factures.forEach(facture => {                         // On fait une boucle, on peut aussi résumé par factures.map(facture =>
-    const liEl = document.createElement('li');          // On créé une fonction et on lui mets un li
-    liEl.innerHTML = facture.id + "<button class='supprimerFacture' data-id='"+facture.id+"'>x</button>";                        // On rajoute le l'id de la facture dans liEl
-    ulEl.appendChild(liEl);                             // En résumé, la ligne ulEl.appendChild(liEl) ajoute l'élément de liste liEl (qui contient l'identifiant d'une facture) à l'élément de liste non ordonnée ulEl. Cela signifie que chaque fois que cette ligne est exécutée dans la boucle, un nouvel élément de liste sera ajouté à la liste affichée sur la page web.
-  })
-rootEl.appendChild(ulEl);                               // On rajoute 
+
+const afficheFactures = (factures) => {
+  // Sélection de l'élément racine
+  const rootEl = document.querySelector('#root');
+  rootEl.innerHTML = ''; // Vide la page
+
+  const ulEl = document.createElement('ul');            // Création d'un élément ul
+
+  factures.forEach(facture => {                         // Boucle sur les factures
+    const liEl = document.createElement('li');          // Création d'un élément li
+    liEl.innerHTML = `${facture.id} <button class="supprimerFacture" data-id="${facture.id}">x</button>`;// Ajout du contenu au li
+    ulEl.appendChild(liEl);                             // Ajout du li à l'ul
+  });
+
+  // Ajout de l'ul à la page
+  rootEl.appendChild(ulEl);
+
+  // Sélection des boutons de suppression
+  const buttonsDelete = document.querySelectorAll('.supprimerFacture');
+
+  buttonsDelete.forEach(button => {                                     // Ajout d'un événement sur chaque bouton
+    button.addEventListener('click', async (event) => {
+      if (confirm('Etes-vous sûr de supprimer cette facture ?')) {      // Confirmation de suppression
+        const idFacture = event.target.dataset.id;                      // Récupération de l'ID de la facture
+        try {
+          await deleteDoc(doc(db, 'factures', idFacture));              // Suppression de la facture
+          console.log(`Facture avec ID ${idFacture} supprimée.`);
+        } catch (error) {                                               // Gestion de l'erreur
+          console.error(`Erreur lors de la suppression de la facture avec ID ${idFacture} :`, error);
+        }
+      }
+    });
+  });
 };
-
-//Supression de factures
-const buttonsDelete = document.querySelectorAll('.supprimerFacture');
-buttonsDelete.forEach(button => {
-  button.addEventListener('click', async (event) => {
-    const idFacture = event.target.dataset.id;          // Récupere l'ID
-    await deleteDoc(doc(db, 'factures', idFacture));
-
-    console.log('click');
-    console.log(event.target.dataset.id);               // l'idée c'est de quand on appui sur le bouton ça suppr dans la base de données;
-    
-    //Actualisation des factures affichés
-    const updateFactures = await getFactures(db);
-    const rootEl = document.querySelector('#root');
-    rootEl.innerHTML = ''; // On vide la page
-    afficheFactures(updateFactures);
-  })
-});
-afficheFactures(factures);
+    afficheFactures(factures);                            // On appelle la fonction afficheFactures
 
 //Ajout de nouvelles factures
 const formEl = document.querySelector('#formAdd form');
